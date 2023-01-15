@@ -61,7 +61,7 @@ int comp_bitstream_write_char(comp_bitstream_t* s, char ch)
     {
         for(int i = 1; i <= 8; i++)
         {
-            int bit = (((unsigned char)ch) >> (8 - i)) & 1;
+            int bit = (((u_char)ch) >> (8 - i)) & 1;
             if(comp_bitstream_write_bit(s, bit) < 0)
                 return -1;
         }
@@ -104,7 +104,8 @@ int comp_bitstream_read_bit(comp_bitstream_t* s, int* bit)
     if(s->eof)
         return -1;
     s->in_buf_remain--;
-    *bit = (s->in_buf >> s->in_buf_remain) & 1;
+    if(bit)
+        *bit = (s->in_buf >> s->in_buf_remain) & 1;
     return 0;
 }
 

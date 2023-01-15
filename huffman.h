@@ -7,6 +7,7 @@
 #include "internal/str.h"
 #include "internal/vector.h"
 #include <stdio.h>
+#include <sys/types.h>
 
 #define HUFFMAN_HEADER_MARKER 0x48
 #define HUFFMAN_MAX_SYMBOL 256
@@ -16,7 +17,7 @@
 
 struct comp_huffman_node_s
 {
-    unsigned char c;
+    u_char c;
     int freq;
     int is_leaf;
     struct comp_huffman_node_s* left;
@@ -25,7 +26,7 @@ struct comp_huffman_node_s
 
 struct comp_huffman_symbol_s
 {
-    unsigned char symbol;
+    u_char symbol;
     size_t symbol_code_len;
 };
 
@@ -42,6 +43,7 @@ struct comp_huffman_ctx_s
     comp_str_t symbol_code_table[256];
     comp_vec_t* symbols;
     comp_huffman_node_t* root;
+    u_char padding;
     comp_huffman_encode_f huffman_encode;
     comp_huffman_decode_f huffman_decode;
 };

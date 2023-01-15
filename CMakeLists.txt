@@ -10,4 +10,4 @@ add_subdirectory(internal/test)
 add_executable(compress main.c
         internal/bitstream.c internal/vector.c
         internal/pqueue.c internal/str.c
-        huffman.c compressor.c)
+        huffman.c comp.c)

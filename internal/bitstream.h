@@ -5,12 +5,13 @@
 #ifndef COMPRESS_BITSTREAM_H
 #define COMPRESS_BITSTREAM_H
 #include <stdio.h>
+#include <sys/types.h>
 
 struct comp_bitstream_s
 {
     FILE* fp;
-    unsigned char in_buf;
-    unsigned char out_buf;
+    u_char in_buf;
+    u_char out_buf;
     int in_buf_remain;
     int out_buf_remain;
     int eof;
