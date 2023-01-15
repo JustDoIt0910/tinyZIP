@@ -46,6 +46,11 @@ struct comp_huffman_s
     comp_huffman_decode_f huffman_decode;
 };
 
+#define HUFFMAN_GET_SYMBOL(index) \
+(((comp_huffman_symbol_t*)(comp_vec_get(huff->symbols, index)))->symbol)
+#define HUFFMAN_GET_SYMBOL_LEN(index) \
+(((comp_huffman_symbol_t*)(comp_vec_get(huff->symbols, index)))->symbol_code_len)
+
 typedef struct comp_huffman_s comp_huffman_t;
 
 comp_huffman_t* comp_huffman_init();

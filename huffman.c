@@ -147,22 +147,74 @@ static void huffman_build_code(comp_huffman_t* huff)
     }
 }
 
-void huffman_write_header(comp_huffman_t* huff, comp_bitstream_t* in_stream)
+void huffman_write_header(comp_huffman_t* huff, size_t header_len, comp_bitstream_t* out_stream)
 {
-    comp_bitstream_write_char(in_stream, HUFFMAN_HEADER_MARKER);
-    
+    comp_bitstream_write_char(out_stream, HUFFMAN_HEADER_MARKER);
+    unsigned char header_len_high = (header_len >> 8) & 0xFF;
+    unsigned char header_len_low = header_len & 0xFF;
+    comp_bitstream_write_char(out_stream, (char) header_len_high);
+    comp_bitstream_write_char(out_stream, (char) header_len_low);
+    char num[17] = {0};
+    for(int i = 0; i < comp_vec_len(huff->symbols); i++)
+        num[HUFFMAN_GET_SYMBOL_LEN(i)]++;
+    comp_bitstream_write(out_stream, num + 1, 16);
+    for(int i = 0; i < comp_vec_len(huff->symbols); i++)
+        comp_bitstream_write_char(out_stream, HUFFMAN_GET_SYMBOL(i));
+}
+
+static void huffman_free_tree(comp_huffman_node_t* root)
+{
+    if(root->is_leaf)
+    {
+        free(root);
+        return;
+    }
+    huffman_free_tree(root->left);
+    huffman_free_tree(root->right);
+    free(root);
+}
+
+static void huffman_ctx_cleanup(comp_huffman_t* huff)
+{
+    memset(huff->freq, 0, HUFFMAN_MAX_SYMBOL);
+    for(int i = 0; i < HUFFMAN_MAX_SYMBOL; i++)
+        comp_str_clear(huff->symbol_code_table[i]);
+    for(int i = 0; i < comp_vec_len(huff->symbols); i++)
+        free(comp_vec_get(huff->symbols, i));
+    comp_vec_clear(huff->symbols);
+    huffman_free_tree(huff->root);
+    huff->root = NULL;
+}
+
+static void huffman_encode_content(comp_huffman_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
+{
+    char input;
+    while(1)
+    {
+        comp_bitstream_read_char(in_stream, &input);
+        if(comp_bitstream_eof(in_stream))
+            break;
+        comp_str_t code = huff->symbol_code_table[(unsigned char) input];
+        for(int i = 0; i < comp_str_len(code); i++)
+            comp_bitstream_write_bit(out_stream, comp_str_at(code, i) - '0');
+    }
+    comp_bitstream_flush(out_stream);
 }
 
 int encode(comp_huffman_t* huff, FILE* in, FILE* out)
 {
     comp_bitstream_t* in_stream = comp_bitstream_init(in);
+    comp_bitstream_t* out_stream = comp_bitstream_init(out);
+    if(!in_stream || !out_stream) return -1;
     char c;
+    size_t huffman_header_len = 2 + 16;
     while(1)
     {
         comp_bitstream_read_char(in_stream, &c);
         if(comp_bitstream_eof(in_stream))
             break;
-        huff->freq[(unsigned char) c]++;
+        if(huff->freq[(unsigned char) c]++ == 0)
+            huffman_header_len++;
     }
     huffman_build_tree(huff);
     huffman_build_code(huff);
@@ -170,9 +222,15 @@ int encode(comp_huffman_t* huff, FILE* in, FILE* out)
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
     {
         comp_huffman_symbol_t* sym = comp_vec_get(huff->symbols, i);
-        HUFFMAN_DEBUG("%c: %s", sym->symbol, huff->symbol_code_table[sym->symbol]);
+        HUFFMAN_DEBUG("%x: %s", sym->symbol, huff->symbol_code_table[sym->symbol]);
     }
 #endif
+    huffman_write_header(huff, huffman_header_len, out_stream);
+    comp_bitstream_reset(in_stream);
+    huffman_encode_content(huff, in_stream, out_stream);
+    huffman_ctx_cleanup(huff);
+    comp_bitstream_destroy(in_stream);
+    comp_bitstream_destroy(out_stream);
     return 0;
 }
 

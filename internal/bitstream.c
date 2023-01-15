@@ -70,6 +70,14 @@ int comp_bitstream_write_char(comp_bitstream_t* s, char ch)
     return -1;
 }
 
+int comp_bitstream_write(comp_bitstream_t* s, const char* data, size_t len)
+{
+    for(size_t i = 0; i < len; i++)
+        if(comp_bitstream_write_char(s, *(data + i)) < 0)
+            return -1;
+    return 0;
+}
+
 int comp_bitstream_flush(comp_bitstream_t* s)
 {
     if(clear_out_buf(s) < 0)
@@ -135,4 +143,12 @@ void comp_bitstream_close(comp_bitstream_t* s)
 int comp_bitstream_eof(comp_bitstream_t* s)
 {
     return s->eof;
+}
+
+void comp_bitstream_reset(comp_bitstream_t* s)
+{
+    rewind(s->fp);
+    s->in_buf = s->out_buf = 0;
+    s->in_buf_remain = s->out_buf_remain = 0;
+    s->eof = 0;
 }

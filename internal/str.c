@@ -150,3 +150,11 @@ comp_str_t comp_str_parse_int(int v, int base)
         str = comp_str_append_char(str, tmp[j]);
     return str;
 }
+
+char comp_str_at(comp_str_t s, size_t index)
+{
+    comp_ds_t* hdr = COMP_DS_HDR(s);
+    if(index >= hdr->len)
+        return -1;
+    return s[index];
+}
