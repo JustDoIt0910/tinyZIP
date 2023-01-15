@@ -32,11 +32,11 @@ struct comp_huffman_symbol_s
 typedef struct comp_huffman_node_s comp_huffman_node_t;
 typedef struct comp_huffman_symbol_s comp_huffman_symbol_t;
 
-struct comp_huffman_s;
-typedef int (*comp_huffman_encode_f)(struct comp_huffman_s*, FILE*, FILE*);
-typedef int (*comp_huffman_decode_f)(struct comp_huffman_s*, FILE*, FILE*);
+struct comp_huffman_ctx_s;
+typedef int (*comp_huffman_encode_f)(struct comp_huffman_ctx_s*, FILE*, FILE*);
+typedef int (*comp_huffman_decode_f)(struct comp_huffman_ctx_s*, FILE*, FILE*);
 
-struct comp_huffman_s
+struct comp_huffman_ctx_s
 {
     int freq[256];
     comp_str_t symbol_code_table[256];
@@ -51,9 +51,9 @@ struct comp_huffman_s
 #define HUFFMAN_GET_SYMBOL_LEN(index) \
 (((comp_huffman_symbol_t*)(comp_vec_get(huff->symbols, index)))->symbol_code_len)
 
-typedef struct comp_huffman_s comp_huffman_t;
+typedef struct comp_huffman_ctx_s comp_huffman_ctx_t;
 
-comp_huffman_t* comp_huffman_init();
-void comp_huffman_free(comp_huffman_t*);
+comp_huffman_ctx_t* comp_huffman_init();
+void comp_huffman_free(comp_huffman_ctx_t*);
 
 #endif //COMPRESS_HUFFMAN_H

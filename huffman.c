@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int encode(comp_huffman_t* huff, FILE* in, FILE* out);
-static int decode(comp_huffman_t* huff, FILE* in, FILE* out);
+static int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out);
+static int decode(comp_huffman_ctx_t* huff, FILE* in, FILE* out);
 
 static inline int huffman_node_pri_cmp(const void* a, const void* b)
 {
@@ -26,7 +26,7 @@ static inline int canonical_symbol_cmp(const void* a, const void* b)
     return 0;
 }
 
-static comp_huffman_node_t* huffman_node_new(unsigned char c, int freq,
+static comp_huffman_node_t* huffman_node_new(unsigned char c, int freq, int is_leaf,
                                              comp_huffman_node_t* lchild, comp_huffman_node_t* rchild)
 {
     comp_huffman_node_t* node = (comp_huffman_node_t*) malloc(sizeof(comp_huffman_node_t));
@@ -35,7 +35,7 @@ static comp_huffman_node_t* huffman_node_new(unsigned char c, int freq,
     node->freq = freq;
     node->left = lchild;
     node->right = rchild;
-    node->is_leaf = (lchild == NULL && rchild == NULL);
+    node->is_leaf = is_leaf;
     return node;
 }
 
@@ -48,9 +48,9 @@ static comp_huffman_symbol_t* huffman_symbol_new(unsigned char sym, size_t code_
     return huff_symbol;
 }
 
-comp_huffman_t* comp_huffman_init()
+comp_huffman_ctx_t* comp_huffman_init()
 {
-    comp_huffman_t* huff = (comp_huffman_t*) malloc(sizeof(comp_huffman_t));
+    comp_huffman_ctx_t* huff = (comp_huffman_ctx_t*) malloc(sizeof(comp_huffman_ctx_t));
     if(!huff) return NULL;
     memset(huff->freq, 0, HUFFMAN_MAX_SYMBOL);
     for(int i = 0; i < HUFFMAN_MAX_SYMBOL; i++)
@@ -62,15 +62,14 @@ comp_huffman_t* comp_huffman_init()
     return huff;
 }
 
-static int huffman_build_tree(comp_huffman_t* huff)
+static int huffman_build_tree(comp_huffman_ctx_t* huff)
 {
     comp_pqueue_t* pq = comp_pqueue_init(64, huffman_node_pri_cmp);
     if(!pq) return -1;
     for(int c = 0; c < HUFFMAN_MAX_SYMBOL; c++)
         if(huff->freq[c] > 0)
         {
-            comp_huffman_node_t* node = huffman_node_new((unsigned char)c, huff->freq[c],
-                                                         NULL, NULL);
+            comp_huffman_node_t* node = huffman_node_new((unsigned char)c, huff->freq[c], 1, NULL, NULL);
             if(!node)
             {
                 comp_pqueue_destroy(pq);
@@ -82,7 +81,7 @@ static int huffman_build_tree(comp_huffman_t* huff)
     {
         comp_huffman_node_t* x = comp_pqueue_pop(pq);
         comp_huffman_node_t* y = comp_pqueue_pop(pq);
-        comp_huffman_node_t* parent = huffman_node_new(0, x->freq + y->freq, x, y);
+        comp_huffman_node_t* parent = huffman_node_new(0, x->freq + y->freq, 0, x, y);
         comp_pqueue_insert(pq, parent);
     }
     huff->root = comp_pqueue_pop(pq);
@@ -90,7 +89,7 @@ static int huffman_build_tree(comp_huffman_t* huff)
     return 0;
 }
 
-static void get_code_len(comp_huffman_t* huff, comp_huffman_node_t* root, size_t code_len)
+static void get_code_len(comp_huffman_ctx_t* huff, comp_huffman_node_t* root, size_t code_len)
 {
     if(root->is_leaf)
     {
@@ -102,7 +101,7 @@ static void get_code_len(comp_huffman_t* huff, comp_huffman_node_t* root, size_t
     get_code_len(huff, root->right, code_len + 1);
 }
 
-static void huffman_assign_code(comp_huffman_t* huff, int code, comp_huffman_symbol_t* sym)
+static void huffman_assign_code(comp_huffman_ctx_t* huff, int code, comp_huffman_symbol_t* sym)
 {
     comp_str_t code_str = comp_str_parse_int(code, 2);
     comp_str_t symbol_code = huff->symbol_code_table[sym->symbol];
@@ -119,7 +118,7 @@ static void huffman_assign_code(comp_huffman_t* huff, int code, comp_huffman_sym
     comp_str_free(code_str);
 }
 
-static void huffman_build_code(comp_huffman_t* huff)
+static void huffman_build_code(comp_huffman_ctx_t* huff)
 {
     get_code_len(huff, huff->root, 0);
     comp_vec_sort(huff->symbols, 0, comp_vec_len(huff->symbols) - 1, canonical_symbol_cmp);
@@ -147,7 +146,7 @@ static void huffman_build_code(comp_huffman_t* huff)
     }
 }
 
-void huffman_write_header(comp_huffman_t* huff, size_t header_len, comp_bitstream_t* out_stream)
+void huffman_write_header(comp_huffman_ctx_t* huff, size_t header_len, comp_bitstream_t* out_stream)
 {
     comp_bitstream_write_char(out_stream, HUFFMAN_HEADER_MARKER);
     unsigned char header_len_high = (header_len >> 8) & 0xFF;
@@ -174,7 +173,7 @@ static void huffman_free_tree(comp_huffman_node_t* root)
     free(root);
 }
 
-static void huffman_ctx_cleanup(comp_huffman_t* huff)
+static void huffman_ctx_cleanup(comp_huffman_ctx_t* huff)
 {
     memset(huff->freq, 0, HUFFMAN_MAX_SYMBOL);
     for(int i = 0; i < HUFFMAN_MAX_SYMBOL; i++)
@@ -182,11 +181,12 @@ static void huffman_ctx_cleanup(comp_huffman_t* huff)
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
         free(comp_vec_get(huff->symbols, i));
     comp_vec_clear(huff->symbols);
-    huffman_free_tree(huff->root);
+    if(huff->root)
+        huffman_free_tree(huff->root);
     huff->root = NULL;
 }
 
-static void huffman_encode_content(comp_huffman_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
+static void huffman_encode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
 {
     char input;
     while(1)
@@ -201,7 +201,7 @@ static void huffman_encode_content(comp_huffman_t* huff, comp_bitstream_t* in_st
     comp_bitstream_flush(out_stream);
 }
 
-int encode(comp_huffman_t* huff, FILE* in, FILE* out)
+int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
 {
     comp_bitstream_t* in_stream = comp_bitstream_init(in);
     comp_bitstream_t* out_stream = comp_bitstream_init(out);
@@ -234,12 +234,90 @@ int encode(comp_huffman_t* huff, FILE* in, FILE* out)
     return 0;
 }
 
-int decode(comp_huffman_t* huff, FILE* in, FILE* out)
+static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream)
 {
+    char input;
+    comp_bitstream_read_char(in_stream, &input);
+    if(input != HUFFMAN_HEADER_MARKER)
+        return -1;
+    char hdr_high, hdr_low;
+    comp_bitstream_read_char(in_stream, &hdr_high);
+    comp_bitstream_read_char(in_stream, &hdr_low);
+    size_t huffman_hdr_len = (unsigned char)hdr_high << 8 | (unsigned char)hdr_low;
+    huffman_hdr_len -= 2;
+    char num[17] = {0};
+    for(int i = 1; i <= 16; i++)
+        if(comp_bitstream_read_char(in_stream, num + i) < 0)
+            return -1;
+    huffman_hdr_len -= 16;
+    for(int i = 1; i <= 16; i++)
+        for(int j = 0; j < num[i]; j++)
+        {
+            comp_bitstream_read_char(in_stream, &input);
+            comp_huffman_symbol_t* symbol = huffman_symbol_new(input, i);
+            comp_vec_push_back(huff->symbols, symbol);
+            huffman_hdr_len -= 1;
+        }
+    return huffman_hdr_len == 0 ? 0 : -1;
+}
+
+static int assign_symbol(comp_huffman_node_t* root, comp_huffman_symbol_t* sym, size_t len)
+{
+    if(len == sym->symbol_code_len)
+    {
+        if(!root->left)
+        {
+            root->left = huffman_node_new(sym->symbol, 0, 1, NULL, NULL);
+            return 0;
+        }
+        if(!root->right)
+        {
+            root->right = huffman_node_new(sym->symbol, 0, 1, NULL, NULL);
+            return 0;
+        }
+        return -1;
+    }
+    if(!root->left)
+        root->left = huffman_node_new(0, 0, 0, NULL, NULL);
+    int assigned = -1;
+    if(!root->left->is_leaf)
+        assigned = assign_symbol(root->left, sym, len + 1);
+    if(assigned < 0)
+    {
+        if(!root->right)
+            root->right = huffman_node_new(0, 0, 0, NULL, NULL);
+        if(!root->right->is_leaf)
+            return assign_symbol(root->right, sym, len + 1);
+        return -1;
+    }
     return 0;
 }
 
-void comp_huffman_free(comp_huffman_t* huff)
+static int huffman_rebuild_tree(comp_huffman_ctx_t* huff)
+{
+    huff->root = huffman_node_new(0, 0, 0, NULL, NULL);
+    for(int i = 0; i < comp_vec_len(huff->symbols); i++)
+        if(assign_symbol(huff->root, (comp_huffman_symbol_t*) comp_vec_get(huff->symbols, i), 1) < 0)
+            return -1;
+    return 0;
+}
+
+int decode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
+{
+    comp_bitstream_t* in_stream = comp_bitstream_init(in);
+    comp_bitstream_t* out_stream = comp_bitstream_init(out);
+//    if(!in_stream || !out_stream) return -1;
+    if(huffman_read_header(huff, in_stream) < 0)
+    {
+        huffman_ctx_cleanup(huff);
+        return -1;
+    }
+    if(huffman_rebuild_tree(huff) < 0)
+        HUFFMAN_DEBUG("%s", "rebuild huffman tree fail");
+    return 0;
+}
+
+void comp_huffman_free(comp_huffman_ctx_t* huff)
 {
     for(int i = 0; i < 256; i++)
         comp_str_free(huff->symbol_code_table[i]);
