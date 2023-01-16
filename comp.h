@@ -7,9 +7,13 @@
 #include <stdio.h>
 #include "huffman.h"
 
+#define COMP_START_MARKER 0x5A52
+#define COMP_FILE_MARKER 0x46
+#define COMP_DIR_MARKER 0x44
+
 struct comp_codec_s;
-typedef int (*comp_encode_f) (struct comp_codec_s*, FILE*, FILE*);
-typedef int (*comp_decode_f) (struct comp_codec_s*, FILE*, FILE*);
+typedef int (*comp_encode_f) (struct comp_codec_s*, comp_bitstream_t*, comp_bitstream_t*);
+typedef int (*comp_decode_f) (struct comp_codec_s*, comp_bitstream_t*, comp_bitstream_t*);
 
 typedef enum comp_codec_type
 { COMP_CODEC_HUFFMAN, COMP_CODEC_LZW } comp_codec_type;

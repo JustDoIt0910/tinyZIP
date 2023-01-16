@@ -3,9 +3,11 @@
 //
 #include "comp.h"
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <string.h>
 
-static int comp_codec_encode(comp_codec_t*, FILE*, FILE*);
-static int comp_codec_decode(comp_codec_t*, FILE*, FILE*);
+static int comp_codec_encode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
+static int comp_codec_decode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
 static void comp_compress(comp_compressor_t*, const char*, const char*);
 static void comp_decompress(comp_compressor_t*, const char*);
 
@@ -79,7 +81,7 @@ void comp_compressor_free(comp_compressor_t* c)
     free(c);
 }
 
-int comp_codec_encode(comp_codec_t* codec, FILE* in, FILE* out)
+int comp_codec_encode(comp_codec_t* codec, comp_bitstream_t* in, comp_bitstream_t* out)
 {
     if(codec->type == COMP_CODEC_HUFFMAN)
     {
@@ -96,7 +98,7 @@ int comp_codec_encode(comp_codec_t* codec, FILE* in, FILE* out)
     return -1;
 }
 
-int comp_codec_decode(comp_codec_t* codec, FILE* in, FILE* out)
+int comp_codec_decode(comp_codec_t* codec, comp_bitstream_t* in, comp_bitstream_t* out)
 {
     if(codec->type == COMP_CODEC_HUFFMAN)
     {
@@ -113,9 +115,52 @@ int comp_codec_decode(comp_codec_t* codec, FILE* in, FILE* out)
     return -1;
 }
 
+static comp_str_t filename(const char* filepath)
+{
+    const char* ptr = strrchr(filepath, '/');
+    if(!ptr)
+        return comp_str_new(filepath);
+    return comp_str_new_len(ptr + 1, strlen(ptr + 1));
+}
+
+static int comp_compress_file(comp_compressor_t* c, comp_str_t filename,
+                              comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
+{
+    comp_bitstream_write_char(out_stream, COMP_FILE_MARKER);
+    comp_bitstream_write_char(out_stream, (char) comp_str_len(filename));
+    comp_bitstream_write(out_stream, filename, comp_str_len(filename));
+    return c->codec->encode(c->codec, in_stream, out_stream);
+}
+
 static void comp_compress(comp_compressor_t* c, const char* in_path, const char* out_path)
 {
+    struct stat st;
+    if(stat(in_path, &st) != 0)
+    {
+        printf("%s isn't a file or directory\n", in_path);
+        return;
+    }
+    FILE* out = fopen(out_path, "wb");
+    comp_bitstream_t* out_stream = comp_bitstream_init(out);
+    if(!out_stream) return;
+    comp_bitstream_write_short(out_stream, COMP_START_MARKER);
+    if(!S_ISDIR(st.st_mode))
+    {
+        FILE* in = fopen(in_path, "rb");
+        comp_bitstream_t* in_stream = comp_bitstream_init(in);
+        if(!in_stream)
+        {
+            comp_bitstream_destroy(out_stream);
+            return;
+        }
+        comp_str_t name = filename(in_path);
+        comp_compress_file(c, name, in_stream, out_stream);
+        comp_str_free(name);
+    }
+    else
+    {
 
+    }
 }
 
 static void comp_decompress(comp_compressor_t* c, const char* in_path)

@@ -70,6 +70,15 @@ int comp_bitstream_write_char(comp_bitstream_t* s, char ch)
     return -1;
 }
 
+int comp_bitstream_write_short(comp_bitstream_t* s, short st)
+{
+    u_char c1 = (st >> 8) & 0xFF;
+    u_char c2 = st & 0xFF;
+    if(comp_bitstream_write_char(s, (char) c1) < 0) return -1;
+    if(comp_bitstream_write_char(s, (char) c2) < 0) return -1;
+    return 0;
+}
+
 int comp_bitstream_write_int(comp_bitstream_t* s, int i)
 {
     u_char c1 = (i >> 24) & 0xFF;
@@ -144,6 +153,17 @@ int comp_bitstream_read_char(comp_bitstream_t* s, char* ch)
     s->in_buf_remain = remain;
     c |= (s->in_buf >> s->in_buf_remain);
     *ch = (char) c;
+    return 0;
+}
+
+int comp_bitstream_read_short(comp_bitstream_t* s, short* st)
+{
+    char c1, c2; short x = 0;
+    if(comp_bitstream_read_char(s, &c1) < 0) return -1;
+    if(comp_bitstream_read_char(s, &c2) < 0) return -1;
+    x = (short) (x | c1);
+    x = (short) ((x << 8) | c2);
+    *st = x;
     return 0;
 }
 

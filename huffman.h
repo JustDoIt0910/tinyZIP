@@ -6,6 +6,7 @@
 #define COMPRESS_HUFFMAN_H
 #include "internal/str.h"
 #include "internal/vector.h"
+#include "internal/bitstream.h"
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -34,8 +35,8 @@ typedef struct comp_huffman_node_s comp_huffman_node_t;
 typedef struct comp_huffman_symbol_s comp_huffman_symbol_t;
 
 struct comp_huffman_ctx_s;
-typedef int (*comp_huffman_encode_f)(struct comp_huffman_ctx_s*, FILE*, FILE*);
-typedef int (*comp_huffman_decode_f)(struct comp_huffman_ctx_s*, FILE*, FILE*);
+typedef int (*comp_huffman_encode_f)(struct comp_huffman_ctx_s*, comp_bitstream_t*, comp_bitstream_t*);
+typedef int (*comp_huffman_decode_f)(struct comp_huffman_ctx_s*, comp_bitstream_t*, comp_bitstream_t*);
 
 struct comp_huffman_ctx_s
 {

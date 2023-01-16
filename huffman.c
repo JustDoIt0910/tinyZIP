@@ -7,8 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out);
-static int decode(comp_huffman_ctx_t* huff, FILE* in, FILE* out);
+static int encode(comp_huffman_ctx_t* huff, comp_bitstream_t* in, comp_bitstream_t* out);
+static int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in, comp_bitstream_t* out);
 
 static inline int huffman_node_pri_cmp(const void* a, const void* b)
 {
@@ -216,10 +216,8 @@ static void huffman_encode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* i
     comp_bitstream_flush(out_stream);
 }
 
-int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
+int encode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
 {
-    comp_bitstream_t* in_stream = comp_bitstream_init(in);
-    comp_bitstream_t* out_stream = comp_bitstream_init(out);
     if(!in_stream || !out_stream) return -1;
     char c;
     // 2 bytes header_len + 4 bytes content_len + 16 bytes symbol num + 1 byte padding_len
@@ -245,8 +243,6 @@ int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
     comp_bitstream_reset(in_stream);
     huffman_encode_content(huff, in_stream, out_stream);
     huffman_ctx_cleanup(huff);
-    comp_bitstream_destroy(in_stream);
-    comp_bitstream_destroy(out_stream);
     return 0;
 }
 
@@ -371,10 +367,8 @@ void huffman_print(comp_huffman_ctx_t* huff)
     print(huff->root, comp_str_empty());
 }
 
-int decode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
+int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
 {
-    comp_bitstream_t* in_stream = comp_bitstream_init(in);
-    comp_bitstream_t* out_stream = comp_bitstream_init(out);
     if(!in_stream || !out_stream) return -1;
     int err = 0;
     if(huffman_read_header(huff, in_stream) < 0)
@@ -395,8 +389,6 @@ int decode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
 
 end:
     huffman_ctx_cleanup(huff);
-    comp_bitstream_destroy(in_stream);
-    comp_bitstream_destroy(out_stream);
     return err == 0 ? 0 : -1;
 }
 

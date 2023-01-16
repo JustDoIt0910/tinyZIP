@@ -42,14 +42,25 @@ int main() {
 //        printf("%x ", ch);
 //    }
 
+//    FILE* fp = fopen("test", "wb+");
+//    comp_bitstream_t* bs = comp_bitstream_init(fp);
+//    u_int32_t i = 0xFFFFFFFF;
+//    comp_bitstream_write_int(bs, (int) i);
+//
+//    comp_bitstream_reset(bs);
+//    int x;
+//    comp_bitstream_read_int(bs, &x);
+//    printf("%u", (u_int32_t)x);
+
     FILE* fp = fopen("test", "wb+");
     comp_bitstream_t* bs = comp_bitstream_init(fp);
-    u_int32_t i = 0xFFFFFFFF;
-    comp_bitstream_write_int(bs, (int) i);
+    u_int16_t i = 0x9100;
+    comp_bitstream_write_short(bs, (short) i);
 
     comp_bitstream_reset(bs);
-    int x;
-    comp_bitstream_read_int(bs, &x);
-    printf("%u", (u_int32_t)x);
+    short x;
+    comp_bitstream_read_short(bs, &x);
+    printf("%x", (u_int16_t)x);
+
     return 0;
 }
