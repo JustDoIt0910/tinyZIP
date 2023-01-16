@@ -20,6 +20,10 @@ void comp_vec_free(comp_vec_t*);
 void* comp_vec_get(comp_vec_t*, size_t);
 size_t comp_vec_len(comp_vec_t*);
 void comp_vec_push_back(comp_vec_t*, void*);
+void* comp_vec_pop_back(comp_vec_t*);
+void* comp_vec_front(comp_vec_t*);
+void* comp_vec_back(comp_vec_t*);
+int comp_vec_empty(comp_vec_t*);
 void comp_vec_sort(comp_vec_t*, int, int, comp_vec_cmp_f);
 void comp_vec_clear(comp_vec_t*);
 

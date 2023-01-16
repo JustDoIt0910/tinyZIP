@@ -18,7 +18,7 @@
 struct comp_huffman_node_s
 {
     u_char c;
-    int freq;
+    u_int32_t freq;
     int is_leaf;
     struct comp_huffman_node_s* left;
     struct comp_huffman_node_s* right;
@@ -39,11 +39,12 @@ typedef int (*comp_huffman_decode_f)(struct comp_huffman_ctx_s*, FILE*, FILE*);
 
 struct comp_huffman_ctx_s
 {
-    int freq[256];
+    u_int32_t freq[256];
     comp_str_t symbol_code_table[256];
     comp_vec_t* symbols;
     comp_huffman_node_t* root;
     u_char padding;
+    u_int32_t content_len;
     comp_huffman_encode_f huffman_encode;
     comp_huffman_decode_f huffman_decode;
 };

@@ -70,6 +70,19 @@ int comp_bitstream_write_char(comp_bitstream_t* s, char ch)
     return -1;
 }
 
+int comp_bitstream_write_int(comp_bitstream_t* s, int i)
+{
+    u_char c1 = (i >> 24) & 0xFF;
+    u_char c2 = (i >> 16) & 0xFF;
+    u_char c3 = (i >> 8) & 0xFF;
+    u_char c4 = i & 0xFF;
+    if(comp_bitstream_write_char(s, (char) c1) < 0) return -1;
+    if(comp_bitstream_write_char(s, (char) c2) < 0) return -1;
+    if(comp_bitstream_write_char(s, (char) c3) < 0) return -1;
+    if(comp_bitstream_write_char(s, (char) c4) < 0) return -1;
+    return 0;
+}
+
 int comp_bitstream_write(comp_bitstream_t* s, const char* data, size_t len)
 {
     for(size_t i = 0; i < len; i++)
@@ -131,6 +144,21 @@ int comp_bitstream_read_char(comp_bitstream_t* s, char* ch)
     s->in_buf_remain = remain;
     c |= (s->in_buf >> s->in_buf_remain);
     *ch = (char) c;
+    return 0;
+}
+
+int comp_bitstream_read_int(comp_bitstream_t* s, int* i)
+{
+    char c1, c2, c3, c4; int x = 0;
+    if(comp_bitstream_read_char(s, &c1) < 0) return -1;
+    if(comp_bitstream_read_char(s, &c2) < 0) return -1;
+    if(comp_bitstream_read_char(s, &c3) < 0) return -1;
+    if(comp_bitstream_read_char(s, &c4) < 0) return -1;
+    x |= c1;
+    x = (x << 8) | c2;
+    x = (x << 8) | c3;
+    x = (x << 8) | c4;
+    *i = x;
     return 0;
 }
 

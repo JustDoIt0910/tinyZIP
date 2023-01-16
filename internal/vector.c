@@ -3,8 +3,6 @@
 //
 #include "vector.h"
 #include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 comp_vec_t* comp_vec_init(size_t size)
 {
@@ -31,7 +29,7 @@ void comp_vec_free(comp_vec_t* v)
 
 void* comp_vec_get(comp_vec_t* v, size_t i)
 {
-    if(!v || i < 0 || i >= v->len)
+    if(!v || i >= v->len)
         return NULL;
     return v->data[i];
 }
@@ -54,6 +52,26 @@ void comp_vec_push_back(comp_vec_t* v, void* p)
         v->cap = new_cap;
     }
     v->data[v->len++] = p;
+}
+
+void* comp_vec_pop_back(comp_vec_t* v)
+{
+    return v->data[--v->len];
+}
+
+void* comp_vec_front(comp_vec_t* v)
+{
+    return v->data[0];
+}
+
+void* comp_vec_back(comp_vec_t* v)
+{
+    return v->data[v->len - 1];
+}
+
+int comp_vec_empty(comp_vec_t* v)
+{
+    return v->len == 0;
 }
 
 static inline void vec_swap(comp_vec_t* v, size_t i, size_t j)
@@ -84,7 +102,7 @@ static int vec_quicksort_part(comp_vec_t* v, int l, int r, comp_vec_cmp_f cmp)
 void comp_vec_sort(comp_vec_t* v, int l, int r, comp_vec_cmp_f cmp)
 {
     if(l >= r) return;
-    size_t p = vec_quicksort_part(v, l, r, cmp);
+    int p = vec_quicksort_part(v, l, r, cmp);
     comp_vec_sort(v, l, p - 1, cmp);
     comp_vec_sort(v, p + 1, r, cmp);
 }

@@ -26,7 +26,7 @@ static inline int canonical_symbol_cmp(const void* a, const void* b)
     return 0;
 }
 
-static comp_huffman_node_t* huffman_node_new(u_char c, int freq, int is_leaf,
+static comp_huffman_node_t* huffman_node_new(u_char c, u_int32_t freq, int is_leaf,
                                              comp_huffman_node_t* lchild, comp_huffman_node_t* rchild)
 {
     comp_huffman_node_t* node = (comp_huffman_node_t*) malloc(sizeof(comp_huffman_node_t));
@@ -58,6 +58,7 @@ comp_huffman_ctx_t* comp_huffman_init()
     huff->symbols = comp_vec_init(64);
     huff->root = NULL;
     huff->padding = 0;
+    huff->content_len = 0;
     huff->huffman_encode = encode;
     huff->huffman_decode = decode;
     return huff;
@@ -131,6 +132,7 @@ static void huffman_build_code(comp_huffman_ctx_t* huff)
     {
         comp_huffman_symbol_t* sym = comp_vec_get(huff->symbols, i);
         remain += (sym->symbol_code_len * huff->freq[sym->symbol]) % 8;
+        huff->content_len += huff->freq[sym->symbol];
         if(sym->symbol_code_len == pre_code_len)
         {
             huffman_assign_code(huff, code, sym);
@@ -157,6 +159,7 @@ void huffman_write_header(comp_huffman_ctx_t* huff, size_t header_len, comp_bits
     u_char header_len_low = header_len & 0xFF;
     comp_bitstream_write_char(out_stream, (char) header_len_high);
     comp_bitstream_write_char(out_stream, (char) header_len_low);
+    comp_bitstream_write_int(out_stream, (int) huff->content_len);
     char num[17] = {0};
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
         num[HUFFMAN_GET_SYMBOL_LEN(i)]++;
@@ -192,6 +195,7 @@ static void huffman_ctx_cleanup(comp_huffman_ctx_t* huff)
     if(huff->root)
         huffman_free_tree(huff->root);
     huff->padding = 0;
+    huff->content_len = 0;
     huff->root = NULL;
 }
 
@@ -218,7 +222,8 @@ int encode(comp_huffman_ctx_t* huff, FILE* in, FILE* out)
     comp_bitstream_t* out_stream = comp_bitstream_init(out);
     if(!in_stream || !out_stream) return -1;
     char c;
-    size_t huffman_header_len = 2 + 16 + 1;
+    // 2 bytes header_len + 4 bytes content_len + 16 bytes symbol num + 1 byte padding_len
+    size_t huffman_header_len = 2 + 4 + 16 + 1;
     while(1)
     {
         comp_bitstream_read_char(in_stream, &c);
@@ -256,6 +261,10 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
     comp_bitstream_read_char(in_stream, &hdr_low);
     size_t huffman_hdr_len = (u_char)hdr_high << 8 | (u_char)hdr_low;
     huffman_hdr_len -= 2;
+    int content_len;
+    comp_bitstream_read_int(in_stream, &content_len);
+    huff->content_len = content_len;
+    huffman_hdr_len -= 4;
     char num[17] = {0};
     for(int i = 1; i <= 16; i++)
         if(comp_bitstream_read_char(in_stream, num + i) < 0)

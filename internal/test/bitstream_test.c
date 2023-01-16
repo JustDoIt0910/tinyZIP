@@ -31,15 +31,25 @@ int main() {
 //    comp_bitstream_write_char(bs, 'a');
 //    comp_bitstream_destroy(bs);
 
-    FILE* fp = fopen("test3", "rb+");
+//    FILE* fp = fopen("test3", "rb+");
+//    comp_bitstream_t* bs = comp_bitstream_init(fp);
+//    if(!bs)
+//       return 0;
+//    char ch;
+//    for(int i = 0; i < 10; i++)
+//    {
+//        comp_bitstream_read_char(bs, &ch);
+//        printf("%x ", ch);
+//    }
+
+    FILE* fp = fopen("test", "wb+");
     comp_bitstream_t* bs = comp_bitstream_init(fp);
-    if(!bs)
-       return 0;
-    char ch;
-    for(int i = 0; i < 10; i++)
-    {
-        comp_bitstream_read_char(bs, &ch);
-        printf("%x ", ch);
-    }
+    u_int32_t i = 0xFFFFFFFF;
+    comp_bitstream_write_int(bs, (int) i);
+
+    comp_bitstream_reset(bs);
+    int x;
+    comp_bitstream_read_int(bs, &x);
+    printf("%u", (u_int32_t)x);
     return 0;
 }

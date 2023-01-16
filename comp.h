@@ -8,8 +8,8 @@
 #include "huffman.h"
 
 struct comp_codec_s;
-typedef void (*comp_encode_f) (struct comp_codec_s, FILE*, FILE*);
-typedef void (*comp_decode_f) (struct comp_codec_s, FILE*, FILE*);
+typedef int (*comp_encode_f) (struct comp_codec_s*, FILE*, FILE*);
+typedef int (*comp_decode_f) (struct comp_codec_s*, FILE*, FILE*);
 
 typedef enum comp_codec_type
 { COMP_CODEC_HUFFMAN, COMP_CODEC_LZW } comp_codec_type;

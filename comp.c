@@ -4,10 +4,10 @@
 #include "comp.h"
 #include <stdlib.h>
 
-static void comp_codec_encode(struct comp_codec_s, FILE*, FILE*);
-static void comp_codec_decode(struct comp_codec_s, FILE*, FILE*);
-static void comp_compress(struct comp_compressor_s*, const char*, const char*);
-static void comp_decompress(struct comp_compressor_s*, const char*);
+static int comp_codec_encode(comp_codec_t*, FILE*, FILE*);
+static int comp_codec_decode(comp_codec_t*, FILE*, FILE*);
+static void comp_compress(comp_compressor_t*, const char*, const char*);
+static void comp_decompress(comp_compressor_t*, const char*);
 
 static comp_huffman_codec_t* huffman_codec_new()
 {
@@ -79,22 +79,46 @@ void comp_compressor_free(comp_compressor_t* c)
     free(c);
 }
 
-void comp_codec_encode(struct comp_codec_s codec, FILE* in, FILE* out)
+int comp_codec_encode(comp_codec_t* codec, FILE* in, FILE* out)
+{
+    if(codec->type == COMP_CODEC_HUFFMAN)
+    {
+        comp_huffman_codec_t* huffman_codec = (comp_huffman_codec_t*) codec;
+        comp_huffman_ctx_t* ctx = huffman_codec->huffman_ctx;
+        return ctx->huffman_encode(ctx, in, out);
+    }
+    else if(codec->type == COMP_CODEC_LZW)
+    {
+        comp_lzw_codec_t* lzw_codec = (comp_lzw_codec_t*) codec;
+        // TODO lzw encode
+        return -1;
+    }
+    return -1;
+}
+
+int comp_codec_decode(comp_codec_t* codec, FILE* in, FILE* out)
+{
+    if(codec->type == COMP_CODEC_HUFFMAN)
+    {
+        comp_huffman_codec_t* huffman_codec = (comp_huffman_codec_t*) codec;
+        comp_huffman_ctx_t* ctx = huffman_codec->huffman_ctx;
+        return ctx->huffman_decode(ctx, in, out);
+    }
+    else if(codec->type == COMP_CODEC_LZW)
+    {
+        comp_lzw_codec_t* lzw_codec = (comp_lzw_codec_t*) codec;
+        // TODO lzw decode
+        return -1;
+    }
+    return -1;
+}
+
+static void comp_compress(comp_compressor_t* c, const char* in_path, const char* out_path)
 {
 
 }
 
-void comp_codec_decode(struct comp_codec_s codec, FILE* in, FILE* out)
-{
-
-}
-
-static void comp_compress(struct comp_compressor_s* c, const char* in_path, const char* out_path)
-{
-
-}
-
-static void comp_decompress(struct comp_compressor_s* c, const char* in_path)
+static void comp_decompress(comp_compressor_t* c, const char* in_path)
 {
 
 }
