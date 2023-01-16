@@ -345,6 +345,7 @@ static void print(comp_huffman_node_t* root, comp_str_t code)
     if(root->is_leaf)
     {
         printf("%x ==> %s\n", root->c, code);
+        comp_str_free(code);
         return;
     }
     comp_str_t left_code = comp_str_new(code);
