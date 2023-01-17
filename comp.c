@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <dirent.h>
 
 static int comp_codec_encode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
 static int comp_codec_decode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
@@ -117,11 +118,11 @@ int comp_codec_decode(comp_codec_t* codec, comp_bitstream_t* in, comp_bitstream_
     return -1;
 }
 
-static comp_str_t filename(const char* filepath)
+static comp_str_t basename(const char* path)
 {
-    const char* ptr = strrchr(filepath, '/');
+    const char* ptr = strrchr(path, '/');
     if(!ptr)
-        return comp_str_new(filepath);
+        return comp_str_new(path);
     return comp_str_new_len(ptr + 1, strlen(ptr + 1));
 }
 
@@ -136,7 +137,55 @@ static int comp_compress_file(comp_compressor_t* c, comp_str_t filename,
 
 static int comp_compress_dir(comp_compressor_t* c, comp_str_t dir_path, comp_bitstream_t* out_stream)
 {
-
+    comp_bitstream_write_char(out_stream, COMP_DIR_MARKER);
+    comp_str_t dirname = basename(dir_path);
+    comp_bitstream_write_char(out_stream, (char) comp_str_len(dirname));
+    comp_bitstream_write(out_stream, dirname, comp_str_len(dirname));
+    comp_str_free(dirname);
+    DIR* dir = opendir(dir_path);
+    struct dirent* entry;
+    while((entry = readdir(dir)) != NULL)
+    {
+        if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+            continue;
+        if(entry->d_type == DT_REG)
+        {
+            comp_str_t file_path = comp_str_new(dir_path);
+            file_path = comp_str_append_char(file_path, '/');
+            file_path = comp_str_append_str(file_path, entry->d_name);
+            printf("compress %s  ", file_path);
+            comp_bitstream_t* in_stream = comp_bitstream_init(fopen(file_path, "rb"));
+            comp_str_free(file_path);
+            if(!in_stream)
+                continue;
+            comp_str_t filename = comp_str_new(entry->d_name);
+            if(comp_compress_file(c, filename, in_stream, out_stream) < 0)
+            {
+                printf("fail.\n");
+                comp_bitstream_destroy(in_stream);
+                comp_str_free(filename);
+                return -1;
+            }
+            printf("done.\n");
+            comp_bitstream_destroy(in_stream);
+            comp_str_free(filename);
+        }
+        else if(entry->d_type == DT_DIR)
+        {
+            comp_str_t new_dir_path = comp_str_new(dir_path);
+            new_dir_path = comp_str_append_char(new_dir_path, '/');
+            new_dir_path = comp_str_append_str(new_dir_path, entry->d_name);
+            if(comp_compress_dir(c, new_dir_path, out_stream) < 0)
+            {
+                comp_str_free(new_dir_path);
+                return -1;
+            }
+            comp_str_free(new_dir_path);
+        }
+    }
+    comp_bitstream_write_char(out_stream, COMP_DIR_MARKER);
+    comp_bitstream_write_char(out_stream, 0);
+    return 0;
 }
 
 static void comp_compress(comp_compressor_t* c, const char* in_path, const char* out_path)
@@ -160,14 +209,19 @@ static void comp_compress(comp_compressor_t* c, const char* in_path, const char*
             comp_bitstream_destroy(out_stream);
             return;
         }
-        comp_str_t name = filename(in_path);
-        comp_compress_file(c, name, in_stream, out_stream);
+        printf("compress %s  ", in_path);
+        comp_str_t name = basename(in_path);
+        if(comp_compress_file(c, name, in_stream, out_stream) < 0)
+            printf("fail.\n");
+        else printf("done.\n");
         comp_str_free(name);
         comp_bitstream_destroy(in_stream);
     }
     else
     {
-        // TODO compress dir
+        comp_str_t path = comp_str_new(in_path);
+        comp_compress_dir(c, path, out_stream);
+        comp_str_free(path);
     }
     comp_bitstream_destroy(out_stream);
 }
@@ -199,6 +253,22 @@ end:
 
 static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream)
 {
+    char name_len, input;
+    comp_bitstream_read_char(in_stream, &name_len);
+    if(name_len == 0)
+    {
+
+    }
+    else
+    {
+        comp_str_t dir_path = comp_str_new(c->cur_decompress_dir);
+        for(int i = 0; i < (u_char) name_len; i++)
+        {
+            comp_bitstream_read_char(in_stream, &input);
+            dir_path = comp_str_append_char(dir_path, input);
+        }
+        
+    }
     return 0;
 }
 

@@ -186,7 +186,7 @@ static void huffman_free_tree(comp_huffman_node_t* root)
 
 static void huffman_ctx_cleanup(comp_huffman_ctx_t* huff)
 {
-    memset(huff->freq, 0, HUFFMAN_MAX_SYMBOL);
+    memset(huff->freq, 0, HUFFMAN_MAX_SYMBOL * sizeof(u_int32_t));
     for(int i = 0; i < HUFFMAN_MAX_SYMBOL; i++)
         comp_str_clear(huff->symbol_code_table[i]);
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
@@ -233,6 +233,7 @@ int encode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
     huffman_build_tree(huff);
     huffman_build_code(huff);
 #ifdef DEBUG
+    printf("\n");
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
     {
         comp_huffman_symbol_t* sym = comp_vec_get(huff->symbols, i);
@@ -364,6 +365,7 @@ static void print(comp_huffman_node_t* root, comp_str_t code)
 // for debugging
 void huffman_print(comp_huffman_ctx_t* huff)
 {
+    printf("\n");
     print(huff->root, comp_str_empty());
 }
 
