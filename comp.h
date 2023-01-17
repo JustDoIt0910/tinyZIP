@@ -50,9 +50,20 @@ struct comp_compressor_s;
 typedef void (*comp_compress_f) (struct comp_compressor_s*, const char*, const char*);
 typedef void (*comp_decompress_f) (struct comp_compressor_s*, const char*);
 
+typedef enum comp_parse_state
+{
+    COMP_PARSE_START,
+    COMP_PARSE_FILE,
+    COMP_PARSE_DIR,
+    COMP_PARSE_STOP,
+    COMP_PARSE_FAIL
+} comp_parse_state;
+
 struct comp_compressor_s
 {
     comp_codec_t* codec;
+    comp_parse_state state; // for decompression
+    comp_str_t cur_decompress_dir; // for decompression
     comp_compress_f compress;
     comp_decompress_f decompress;
 };

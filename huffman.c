@@ -286,18 +286,18 @@ static void huffman_decode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* i
         comp_bitstream_read_bit(in_stream, NULL);
     int bit;
     comp_huffman_node_t* huff_node = huff->root;
+    u_int32_t len = 0;
     while(1)
     {
         comp_bitstream_read_bit(in_stream, &bit);
-        if(comp_bitstream_eof(in_stream))
-            break;
         if(!bit) huff_node = huff_node->left;
         else huff_node = huff_node->right;
         if(huff_node->is_leaf)
         {
-
             comp_bitstream_write_char(out_stream, (char) huff_node->c);
             huff_node = huff->root;
+            if(++len == huff->content_len)
+                break;
         }
     }
     comp_bitstream_flush(out_stream);
@@ -373,13 +373,13 @@ int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
     int err = 0;
     if(huffman_read_header(huff, in_stream) < 0)
     {
-        err = 1;
+        err = -1;
         goto end;
     }
     if(huffman_rebuild_tree(huff) < 0)
     {
         HUFFMAN_DEBUG("%s", "rebuild huffman tree fail");
-        err = 1;
+        err = -1;
         goto end;
     }
 #ifdef DEBUG
@@ -389,7 +389,7 @@ int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
 
 end:
     huffman_ctx_cleanup(huff);
-    return err == 0 ? 0 : -1;
+    return err;
 }
 
 void comp_huffman_free(comp_huffman_ctx_t* huff)

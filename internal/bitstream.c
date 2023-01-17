@@ -161,8 +161,8 @@ int comp_bitstream_read_short(comp_bitstream_t* s, short* st)
     char c1, c2; short x = 0;
     if(comp_bitstream_read_char(s, &c1) < 0) return -1;
     if(comp_bitstream_read_char(s, &c2) < 0) return -1;
-    x = (short) (x | c1);
-    x = (short) ((x << 8) | c2);
+    x = (short) (x | (c1 & 0xFF));
+    x = (short) ((x << 8) | (c2 & 0xFF));
     *st = x;
     return 0;
 }
@@ -175,9 +175,9 @@ int comp_bitstream_read_int(comp_bitstream_t* s, int* i)
     if(comp_bitstream_read_char(s, &c3) < 0) return -1;
     if(comp_bitstream_read_char(s, &c4) < 0) return -1;
     x |= c1;
-    x = (x << 8) | c2;
-    x = (x << 8) | c3;
-    x = (x << 8) | c4;
+    x = (x << 8) | (c2 & 0xFF);
+    x = (x << 8) | (c3 & 0xFF);
+    x = (x << 8) | (c4 & 0xFF);
     *i = x;
     return 0;
 }

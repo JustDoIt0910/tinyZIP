@@ -69,6 +69,8 @@ comp_compressor_t* comp_compressor_init(comp_codec_type type)
     if(!c) return NULL;
     c->codec = comp_codec_init(type);
     if(!c->codec) return NULL;
+    c->state = COMP_PARSE_STOP;
+    c->cur_decompress_dir = comp_str_empty();
     c->compress = comp_compress;
     c->decompress = comp_decompress;
     return c;
@@ -132,6 +134,11 @@ static int comp_compress_file(comp_compressor_t* c, comp_str_t filename,
     return c->codec->encode(c->codec, in_stream, out_stream);
 }
 
+static int comp_compress_dir(comp_compressor_t* c, comp_str_t dir_path, comp_bitstream_t* out_stream)
+{
+
+}
+
 static void comp_compress(comp_compressor_t* c, const char* in_path, const char* out_path)
 {
     struct stat st;
@@ -156,14 +163,85 @@ static void comp_compress(comp_compressor_t* c, const char* in_path, const char*
         comp_str_t name = filename(in_path);
         comp_compress_file(c, name, in_stream, out_stream);
         comp_str_free(name);
+        comp_bitstream_destroy(in_stream);
     }
     else
     {
-
+        // TODO compress dir
     }
+    comp_bitstream_destroy(out_stream);
+}
+
+static int comp_decompress_file(comp_compressor_t* c, comp_bitstream_t* in_stream)
+{
+    char name_len, input;
+    comp_bitstream_read_char(in_stream, &name_len);
+    comp_str_t filepath = comp_str_new(c->cur_decompress_dir);
+    for(int i = 0; i < (u_char) name_len; i++)
+    {
+        comp_bitstream_read_char(in_stream, &input);
+        filepath = comp_str_append_char(filepath, input);
+    }
+    FILE* out = fopen(filepath, "wb");
+    comp_bitstream_t* out_stream = comp_bitstream_init(out);
+    int err;
+    if(!out_stream)
+    {
+        err = -1;
+        goto end;
+    }
+    err = c->codec->decode(c->codec, in_stream, out_stream);
+end:
+    comp_bitstream_destroy(out_stream);
+    comp_str_free(filepath);
+    return err;
+}
+
+static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream)
+{
+    return 0;
 }
 
 static void comp_decompress(comp_compressor_t* c, const char* in_path)
 {
-
+    FILE* in = fopen(in_path, "rb");
+    if(!in)
+    {
+        printf("%s: file doesn't exist", in_path);
+        return;
+    }
+    comp_bitstream_t* in_stream = comp_bitstream_init(in);
+    if(!in_stream) return;
+    short start_marker; char marker;
+    do
+    {
+        switch (c->state)
+        {
+            case COMP_PARSE_STOP:
+                comp_bitstream_read_short(in_stream, &start_marker);
+                if((u_int16_t) start_marker == COMP_START_MARKER)
+                    c->state = COMP_PARSE_START;
+                break;
+            case COMP_PARSE_START:
+                comp_bitstream_read_char(in_stream, &marker);
+                if((u_char) marker == COMP_FILE_MARKER)
+                    c->state = COMP_PARSE_FILE;
+                else if((u_char) marker == COMP_DIR_MARKER)
+                    c->state = COMP_PARSE_DIR;
+                else c->state = COMP_PARSE_FAIL;
+                break;
+            case COMP_PARSE_FILE:
+                if(comp_decompress_file(c, in_stream) < 0)
+                    c->state = COMP_PARSE_FAIL;
+                else c->state = COMP_PARSE_START;
+                break;
+            case COMP_PARSE_DIR:
+                if(comp_decompress_dir(c, in_stream) < 0)
+                    c->state = COMP_PARSE_FAIL;
+                else c->state = COMP_PARSE_START;
+                break;
+            default: break;
+        }
+    } while (c->state != COMP_PARSE_STOP && c->state != COMP_PARSE_FAIL);
+    comp_bitstream_destroy(in_stream);
 }
