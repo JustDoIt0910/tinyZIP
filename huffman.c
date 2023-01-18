@@ -301,6 +301,12 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
 {
     char input;
     comp_bitstream_read_char(in_stream, &input);
+    if(input == NONE_COMPRESS_MARKER)
+    {
+        comp_bitstream_read_int(in_stream, (int*)(&huff->content_len));
+        huff->disable = 1;
+        return 0;
+    }
     if(input != HUFFMAN_HEADER_MARKER)
         return -1;
     char hdr_high, hdr_low;
@@ -313,9 +319,7 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
         return 0;
     }
     huffman_hdr_len -= 2;
-    int content_len;
-    comp_bitstream_read_int(in_stream, &content_len);
-    huff->content_len = content_len;
+    comp_bitstream_read_int(in_stream, (int*)(&huff->content_len));
     huffman_hdr_len -= 4;
     u_char num[17] = {0};
     for(int i = 1; i <= 16; i++)
@@ -435,6 +439,19 @@ int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
     }
     if(huff->content_len == 0)
         goto end;
+    if(huff->disable)
+    {
+        char input;
+        u_int32_t len = 0;
+        while(1)
+        {
+            comp_bitstream_read_char(in_stream, &input);
+            comp_bitstream_write_char(out_stream, input);
+            if(++len == huff->content_len)
+                break;
+        }
+        goto end;
+    }
     if(huffman_rebuild_tree(huff) < 0)
     {
         HUFFMAN_DEBUG("%s", "rebuild huffman tree fail");

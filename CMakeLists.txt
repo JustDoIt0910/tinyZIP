@@ -4,7 +4,7 @@ project(compress)
 SET(CMAKE_CXX_STANDARD 11)
 SET(CMAKE_BUILD_TYPE "Debug")
 
-add_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
 
 add_subdirectory(internal/test)
 add_executable(compress main.c
