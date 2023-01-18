@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <dirent.h>
+#include "marker.h"
 
 static int comp_codec_encode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
 static int comp_codec_decode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*);
@@ -72,6 +73,7 @@ comp_compressor_t* comp_compressor_init(comp_codec_type type)
     if(!c->codec) return NULL;
     c->state = COMP_PARSE_STOP;
     c->cur_decompress_dir = comp_str_empty();
+    c->decompress_dir_stack = comp_vec_init(10);
     c->compress = comp_compress;
     c->decompress = comp_decompress;
     return c;
@@ -81,6 +83,8 @@ void comp_compressor_free(comp_compressor_t* c)
 {
     if(!c) return;
     comp_codec_free(c->codec);
+    comp_str_free(c->cur_decompress_dir);
+    comp_vec_free(c->decompress_dir_stack);
     free(c);
 }
 
@@ -236,6 +240,7 @@ static int comp_decompress_file(comp_compressor_t* c, comp_bitstream_t* in_strea
         comp_bitstream_read_char(in_stream, &input);
         filepath = comp_str_append_char(filepath, input);
     }
+    printf("decompress %s  ", filepath);
     FILE* out = fopen(filepath, "wb");
     comp_bitstream_t* out_stream = comp_bitstream_init(out);
     int err;
@@ -246,6 +251,7 @@ static int comp_decompress_file(comp_compressor_t* c, comp_bitstream_t* in_strea
     }
     err = c->codec->decode(c->codec, in_stream, out_stream);
 end:
+    printf(err == -1 ? "fail.\n" : "done.\n");
     comp_bitstream_destroy(out_stream);
     comp_str_free(filepath);
     return err;
@@ -257,7 +263,9 @@ static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream
     comp_bitstream_read_char(in_stream, &name_len);
     if(name_len == 0)
     {
-
+        comp_str_t parent_dir = comp_vec_pop_back(c->decompress_dir_stack);
+        c->cur_decompress_dir = comp_str_assign(c->cur_decompress_dir, parent_dir);
+        comp_str_free(parent_dir);
     }
     else
     {
@@ -267,7 +275,15 @@ static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream
             comp_bitstream_read_char(in_stream, &input);
             dir_path = comp_str_append_char(dir_path, input);
         }
-        
+        struct stat st;
+        if(stat(dir_path, &st) == 0)
+            return -1;
+        mkdir(dir_path, S_IRWXU);
+        dir_path = comp_str_append_char(dir_path, '/');
+        comp_str_t parent_dir = comp_str_new(c->cur_decompress_dir);
+        comp_vec_push_back(c->decompress_dir_stack, parent_dir);
+        c->cur_decompress_dir = comp_str_assign(c->cur_decompress_dir, dir_path);
+        comp_str_free(dir_path);
     }
     return 0;
 }
@@ -277,7 +293,7 @@ static void comp_decompress(comp_compressor_t* c, const char* in_path)
     FILE* in = fopen(in_path, "rb");
     if(!in)
     {
-        printf("%s: file doesn't exist", in_path);
+        printf("%s: file doesn't exist\n", in_path);
         return;
     }
     comp_bitstream_t* in_stream = comp_bitstream_init(in);

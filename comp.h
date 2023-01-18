@@ -7,9 +7,6 @@
 #include <stdio.h>
 #include "huffman.h"
 
-#define COMP_START_MARKER 0x5A52
-#define COMP_FILE_MARKER 0x46
-#define COMP_DIR_MARKER 0x44
 
 struct comp_codec_s;
 typedef int (*comp_encode_f) (struct comp_codec_s*, comp_bitstream_t*, comp_bitstream_t*);
@@ -62,8 +59,9 @@ typedef enum comp_parse_state
 struct comp_compressor_s
 {
     comp_codec_t* codec;
-    comp_parse_state state; // for decompression
-    comp_str_t cur_decompress_dir; // for decompression
+    comp_parse_state state;             // for decompression
+    comp_str_t cur_decompress_dir;      // for decompression
+    comp_vec_t* decompress_dir_stack;   // for decompression
     comp_compress_f compress;
     comp_decompress_f decompress;
 };

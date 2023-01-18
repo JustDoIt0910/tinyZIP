@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#define HUFFMAN_HEADER_MARKER 0x48
 #define HUFFMAN_MAX_SYMBOL 256
 #define HUFFMAN_DEBUG(fmt, ...)             \
     printf("%s:%d ", __FILE__, __LINE__),   \
@@ -46,6 +45,7 @@ struct comp_huffman_ctx_s
     comp_huffman_node_t* root;
     u_char padding;
     u_int32_t content_len;
+    int disable;
     comp_huffman_encode_f huffman_encode;
     comp_huffman_decode_f huffman_decode;
 };
