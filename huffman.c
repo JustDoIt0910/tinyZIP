@@ -49,7 +49,7 @@ static comp_huffman_symbol_t* huffman_symbol_new(u_char sym, size_t code_len)
     return huff_symbol;
 }
 
-comp_huffman_ctx_t* comp_huffman_init()
+comp_huffman_ctx_t* comp_huffman_init(comp_progress_bar* bar)
 {
     comp_huffman_ctx_t* huff = (comp_huffman_ctx_t*) malloc(sizeof(comp_huffman_ctx_t));
     if(!huff) return NULL;
@@ -63,6 +63,7 @@ comp_huffman_ctx_t* comp_huffman_init()
     huff->disable = 0;
     huff->huffman_encode = encode;
     huff->huffman_decode = decode;
+    huff->bar = bar;
     return huff;
 }
 
@@ -129,7 +130,7 @@ static void huffman_build_code(comp_huffman_ctx_t* huff)
     int cnt = 0;
     int code = 0; int pre_min_code = 0;
     size_t pre_code_len = 1;
-    u_char remain = 0;
+    u_int32_t remain = 0;
     for(int i = 0; i < comp_vec_len(huff->symbols); i++)
     {
         comp_huffman_symbol_t* sym = comp_vec_get(huff->symbols, i);
@@ -228,6 +229,9 @@ static void huffman_encode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* i
             comp_str_t code = huff->symbol_code_table[(u_char) input];
             for(int i = 0; i < comp_str_len(code); i++)
                 comp_bitstream_write_bit(out_stream, comp_str_at(code, i) - '0');
+#ifndef DEBUG
+            comp_bar_add(huff->bar, 1);
+#endif
         }
     }
     else
@@ -238,6 +242,9 @@ static void huffman_encode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* i
             if(comp_bitstream_eof(in_stream))
                 break;
             comp_bitstream_write_char(out_stream, input);
+#ifndef DEBUG
+            comp_bar_add(huff->bar, 1);
+#endif
         }
     }
     comp_bitstream_flush(out_stream);
@@ -245,6 +252,11 @@ static void huffman_encode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* i
 
 void huffman_check_disable_condition(comp_huffman_ctx_t* huff)
 {
+    if(HUFFMAN_GET_SYMBOL_LEN(comp_vec_len(huff->symbols) - 1) > 16)
+    {
+        huff->disable = 1;
+        return;
+    }
     if(comp_vec_len(huff->symbols) < 256)
         return;
     comp_huffman_symbol_t* sym = comp_vec_front(huff->symbols);
@@ -301,9 +313,11 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
 {
     char input;
     comp_bitstream_read_char(in_stream, &input);
+    comp_bar_add(huff->bar, 1);
     if(input == NONE_COMPRESS_MARKER)
     {
         comp_bitstream_read_int(in_stream, (int*)(&huff->content_len));
+        comp_bar_add(huff->bar, 4);
         huff->disable = 1;
         return 0;
     }
@@ -313,6 +327,7 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
     comp_bitstream_read_char(in_stream, &hdr_high);
     comp_bitstream_read_char(in_stream, &hdr_low);
     size_t huffman_hdr_len = (u_char)hdr_high << 8 | (u_char)hdr_low;
+    comp_bar_add(huff->bar, huffman_hdr_len);
     if(huffman_hdr_len == 0)
     {
         huff->content_len = 0;
@@ -342,14 +357,23 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
 
 static void huffman_decode_content(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
 {
+    char cnt = 0;
     for(int i = 0; i < huff->padding; i++)
+    {
         comp_bitstream_read_bit(in_stream, NULL);
+        cnt++;
+    }
     int bit;
     comp_huffman_node_t* huff_node = huff->root;
     u_int32_t len = 0;
     while(1)
     {
         comp_bitstream_read_bit(in_stream, &bit);
+        if(++cnt == 8)
+        {
+            cnt = 0;
+            comp_bar_add(huff->bar, 1);
+        }
         if(!bit) huff_node = huff_node->left;
         else huff_node = huff_node->right;
         if(huff_node->is_leaf)
@@ -447,6 +471,7 @@ int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
         {
             comp_bitstream_read_char(in_stream, &input);
             comp_bitstream_write_char(out_stream, input);
+            comp_bar_add(huff->bar, 1);
             if(++len == huff->content_len)
                 break;
         }
@@ -454,7 +479,9 @@ int decode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
     }
     if(huffman_rebuild_tree(huff) < 0)
     {
+#ifdef DEBUG
         HUFFMAN_DEBUG("%s", "rebuild huffman tree fail");
+#endif
         err = -1;
         goto end;
     }

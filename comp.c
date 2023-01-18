@@ -13,12 +13,12 @@ static int comp_codec_decode(comp_codec_t*, comp_bitstream_t*, comp_bitstream_t*
 static void comp_compress(comp_compressor_t*, const char*, const char*);
 static void comp_decompress(comp_compressor_t*, const char*);
 
-static comp_huffman_codec_t* huffman_codec_new()
+static comp_huffman_codec_t* huffman_codec_new(comp_progress_bar* bar)
 {
     comp_huffman_codec_t* codec = (comp_huffman_codec_t*) malloc(sizeof(comp_huffman_codec_t));
     if(!codec) return NULL;
     CODEC_PARENT_INIT(codec, COMP_CODEC_HUFFMAN, comp_codec_encode, comp_codec_decode);
-    codec->huffman_ctx = comp_huffman_init();
+    codec->huffman_ctx = comp_huffman_init(bar);
     if(!codec->huffman_ctx)
     {
         free(codec);
@@ -27,7 +27,7 @@ static comp_huffman_codec_t* huffman_codec_new()
     return codec;
 }
 
-static comp_lzw_codec_t* lzw_codec_new()
+static comp_lzw_codec_t* lzw_codec_new(comp_progress_bar* bar)
 {
     comp_lzw_codec_t* codec = (comp_lzw_codec_t*) malloc(sizeof(comp_lzw_codec_t));
     if(!codec) return NULL;
@@ -35,16 +35,16 @@ static comp_lzw_codec_t* lzw_codec_new()
     return codec;
 }
 
-comp_codec_t* comp_codec_init(comp_codec_type type)
+comp_codec_t* comp_codec_init(comp_codec_type type, comp_progress_bar* bar)
 {
     comp_codec_t* codec = NULL;
     switch (type)
     {
         case COMP_CODEC_HUFFMAN:
-            codec = (comp_codec_t*) huffman_codec_new();
+            codec = (comp_codec_t*) huffman_codec_new(bar);
             break;
         case COMP_CODEC_LZW:
-            codec = (comp_codec_t*) lzw_codec_new();
+            codec = (comp_codec_t*) lzw_codec_new(bar);
             break;
         default:
             break;
@@ -69,7 +69,8 @@ comp_compressor_t* comp_compressor_init(comp_codec_type type)
 {
     comp_compressor_t* c = (comp_compressor_t*) malloc(sizeof(comp_compressor_t));
     if(!c) return NULL;
-    c->codec = comp_codec_init(type);
+    c->bar = comp_bar_init("", 0);
+    c->codec = comp_codec_init(type, c->bar);
     if(!c->codec) return NULL;
     c->state = COMP_PARSE_STOP;
     c->cur_decompress_dir = comp_str_empty();
@@ -85,6 +86,7 @@ void comp_compressor_free(comp_compressor_t* c)
     comp_codec_free(c->codec);
     comp_str_free(c->cur_decompress_dir);
     comp_vec_free(c->decompress_dir_stack);
+    comp_bar_free(c->bar);
     free(c);
 }
 
@@ -130,6 +132,31 @@ static comp_str_t basename(const char* path)
     return comp_str_new_len(ptr + 1, strlen(ptr + 1));
 }
 
+static size_t get_dir_size(comp_str_t path)
+{
+    DIR* dir = opendir(path);
+    struct dirent* entry;
+    size_t sz = 0;
+    struct stat st;
+    while((entry = readdir(dir)) != NULL)
+    {
+        if(!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, ".."))
+            continue;
+        comp_str_t new_path = comp_str_new(path);
+        new_path = comp_str_append_char(new_path, '/');
+        new_path = comp_str_append_str(new_path, entry->d_name);
+        if(entry->d_type == DT_REG)
+        {
+            stat(new_path, &st);
+            sz += st.st_size;
+        }
+        else if(entry->d_type == DT_DIR)
+            sz += get_dir_size(new_path);
+        comp_str_free(new_path);
+    }
+    return sz;
+}
+
 static int comp_compress_file(comp_compressor_t* c, comp_str_t filename,
                               comp_bitstream_t* in_stream, comp_bitstream_t* out_stream)
 {
@@ -157,7 +184,11 @@ static int comp_compress_dir(comp_compressor_t* c, comp_str_t dir_path, comp_bit
             comp_str_t file_path = comp_str_new(dir_path);
             file_path = comp_str_append_char(file_path, '/');
             file_path = comp_str_append_str(file_path, entry->d_name);
+#ifdef DEBUG
             printf("compress %s  ", file_path);
+#else
+            comp_bar_set_title(c->bar, file_path);
+#endif
             comp_bitstream_t* in_stream = comp_bitstream_init(fopen(file_path, "rb"));
             comp_str_free(file_path);
             if(!in_stream)
@@ -165,12 +196,16 @@ static int comp_compress_dir(comp_compressor_t* c, comp_str_t dir_path, comp_bit
             comp_str_t filename = comp_str_new(entry->d_name);
             if(comp_compress_file(c, filename, in_stream, out_stream) < 0)
             {
+#ifdef DEBUG
                 printf("fail.\n");
+#endif
                 comp_bitstream_destroy(in_stream);
                 comp_str_free(filename);
                 return -1;
             }
+#ifdef DEBUG
             printf("done.\n");
+#endif
             comp_bitstream_destroy(in_stream);
             comp_str_free(filename);
         }
@@ -200,12 +235,15 @@ static void comp_compress(comp_compressor_t* c, const char* in_path, const char*
         printf("%s isn't a file or directory\n", in_path);
         return;
     }
+    size_t sz;
     FILE* out = fopen(out_path, "wb");
     comp_bitstream_t* out_stream = comp_bitstream_init(out);
     if(!out_stream) return;
     comp_bitstream_write_short(out_stream, COMP_START_MARKER);
     if(!S_ISDIR(st.st_mode))
     {
+        sz = st.st_size;
+        comp_bar_set_total(c->bar, sz);
         FILE* in = fopen(in_path, "rb");
         comp_bitstream_t* in_stream = comp_bitstream_init(in);
         if(!in_stream)
@@ -213,34 +251,51 @@ static void comp_compress(comp_compressor_t* c, const char* in_path, const char*
             comp_bitstream_destroy(out_stream);
             return;
         }
+#ifndef DEBUG
+        comp_bar_set_title(c->bar,in_path);
+#else
         printf("compress %s  ", in_path);
+#endif
         comp_str_t name = basename(in_path);
+#ifndef DEBUG
+        comp_compress_file(c, name, in_stream, out_stream);
+#else
         if(comp_compress_file(c, name, in_stream, out_stream) < 0)
             printf("fail.\n");
         else printf("done.\n");
+#endif
         comp_str_free(name);
         comp_bitstream_destroy(in_stream);
     }
     else
     {
         comp_str_t path = comp_str_new(in_path);
+        sz = get_dir_size(path);
+        comp_bar_set_total(c->bar, sz);
         comp_compress_dir(c, path, out_stream);
         comp_str_free(path);
     }
     comp_bitstream_destroy(out_stream);
+    printf("\n");
 }
 
 static int comp_decompress_file(comp_compressor_t* c, comp_bitstream_t* in_stream)
 {
     char name_len, input;
     comp_bitstream_read_char(in_stream, &name_len);
+    comp_bar_add(c->bar, 1);
     comp_str_t filepath = comp_str_new(c->cur_decompress_dir);
     for(int i = 0; i < (u_char) name_len; i++)
     {
         comp_bitstream_read_char(in_stream, &input);
         filepath = comp_str_append_char(filepath, input);
     }
+    comp_bar_add(c->bar, name_len);
+#ifdef DEBUG
     printf("decompress %s  ", filepath);
+#else
+    comp_bar_set_title(c->bar, filepath);
+#endif
     FILE* out = fopen(filepath, "wb");
     comp_bitstream_t* out_stream = comp_bitstream_init(out);
     int err;
@@ -251,7 +306,9 @@ static int comp_decompress_file(comp_compressor_t* c, comp_bitstream_t* in_strea
     }
     err = c->codec->decode(c->codec, in_stream, out_stream);
 end:
+#ifdef DEBUG
     printf(err == -1 ? "fail.\n" : "done.\n");
+#endif
     comp_bitstream_destroy(out_stream);
     comp_str_free(filepath);
     return err;
@@ -261,6 +318,7 @@ static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream
 {
     char name_len, input;
     comp_bitstream_read_char(in_stream, &name_len);
+    comp_bar_add(c->bar, 1);
     if(name_len == 0)
     {
         comp_str_t parent_dir = comp_vec_pop_back(c->decompress_dir_stack);
@@ -275,6 +333,7 @@ static int comp_decompress_dir(comp_compressor_t* c, comp_bitstream_t* in_stream
             comp_bitstream_read_char(in_stream, &input);
             dir_path = comp_str_append_char(dir_path, input);
         }
+        comp_bar_add(c->bar, name_len);
         struct stat st;
         if(stat(dir_path, &st) == 0)
             return -1;
@@ -296,6 +355,9 @@ static void comp_decompress(comp_compressor_t* c, const char* in_path)
         printf("%s: file doesn't exist\n", in_path);
         return;
     }
+    struct stat st;
+    stat(in_path, &st);
+    comp_bar_set_total(c->bar, st.st_size);
     comp_bitstream_t* in_stream = comp_bitstream_init(in);
     if(!in_stream) return;
     short start_marker; char marker;
@@ -305,11 +367,18 @@ static void comp_decompress(comp_compressor_t* c, const char* in_path)
         {
             case COMP_PARSE_STOP:
                 comp_bitstream_read_short(in_stream, &start_marker);
+                comp_bar_add(c->bar, 2);
                 if((u_int16_t) start_marker == COMP_START_MARKER)
                     c->state = COMP_PARSE_START;
                 break;
             case COMP_PARSE_START:
                 comp_bitstream_read_char(in_stream, &marker);
+                if(comp_bitstream_eof(in_stream))
+                {
+                    c->state = COMP_PARSE_STOP;
+                    break;
+                }
+                comp_bar_add(c->bar, 1);
                 if((u_char) marker == COMP_FILE_MARKER)
                     c->state = COMP_PARSE_FILE;
                 else if((u_char) marker == COMP_DIR_MARKER)
@@ -326,8 +395,10 @@ static void comp_decompress(comp_compressor_t* c, const char* in_path)
                     c->state = COMP_PARSE_FAIL;
                 else c->state = COMP_PARSE_START;
                 break;
-            default: break;
+            default:
+                break;
         }
     } while (c->state != COMP_PARSE_STOP && c->state != COMP_PARSE_FAIL);
     comp_bitstream_destroy(in_stream);
+    printf("\n");
 }

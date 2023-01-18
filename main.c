@@ -11,7 +11,7 @@ void default_output_filename(const char* input, char* output)
     const char* ptr = strrchr(input, '.');
     size_t n = ptr ? ptr - input : strlen(input);
     memcpy(output, input, n);
-    strcat(output, ".myzip");
+    strcat(output, ".tz");
 }
 
 int main(int argc, char* argv[]) {

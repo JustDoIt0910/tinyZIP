@@ -62,13 +62,14 @@ struct comp_compressor_s
     comp_parse_state state;             // for decompression
     comp_str_t cur_decompress_dir;      // for decompression
     comp_vec_t* decompress_dir_stack;   // for decompression
+    comp_progress_bar* bar;
     comp_compress_f compress;
     comp_decompress_f decompress;
 };
 
 typedef struct comp_compressor_s comp_compressor_t;
 
-comp_codec_t* comp_codec_init(comp_codec_type);
+comp_codec_t* comp_codec_init(comp_codec_type, comp_progress_bar*);
 void comp_codec_free(comp_codec_t*);
 comp_compressor_t* comp_compressor_init(comp_codec_type);
 void comp_compressor_free(comp_compressor_t*);

@@ -7,6 +7,7 @@
 #include "internal/str.h"
 #include "internal/vector.h"
 #include "internal/bitstream.h"
+#include "bar.h"
 #include <stdio.h>
 #include <sys/types.h>
 
@@ -46,6 +47,7 @@ struct comp_huffman_ctx_s
     u_char padding;
     u_int32_t content_len;
     int disable;
+    comp_progress_bar* bar;
     comp_huffman_encode_f huffman_encode;
     comp_huffman_decode_f huffman_decode;
 };
@@ -57,7 +59,7 @@ struct comp_huffman_ctx_s
 
 typedef struct comp_huffman_ctx_s comp_huffman_ctx_t;
 
-comp_huffman_ctx_t* comp_huffman_init();
+comp_huffman_ctx_t* comp_huffman_init(comp_progress_bar* bar);
 void comp_huffman_free(comp_huffman_ctx_t*);
 
 #endif //COMPRESS_HUFFMAN_H
