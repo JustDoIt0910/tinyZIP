@@ -23,3 +23,17 @@ make
 ./compress -d <zip file>
 ```
 
+
+
+![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressor1.png)
+
+![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressor2.png)
+
+
+
+#### TODO
+
+- [x] huffman压缩
+- [x] 文件夹打包
+- [ ] LZW压缩
+- [ ] BWT+RLE
