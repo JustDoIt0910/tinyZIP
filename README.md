@@ -58,9 +58,9 @@ make
 | padding 长度(字节对齐) | 1     | padding len                |
 | 压缩数据               |       |                            |
 
-![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressor1.png)
+![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressorDemo1.png)
 
-![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressor2.png)
+![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressorDemo2.png)
 
 
 
