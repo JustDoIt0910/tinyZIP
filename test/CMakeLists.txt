@@ -1,0 +1,1 @@
+add_executable(bar_test bar_test.c ../bar.c ../internal/str.c)
