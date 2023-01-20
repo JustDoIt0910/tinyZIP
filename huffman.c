@@ -284,7 +284,7 @@ int encode(comp_huffman_ctx_t* huff, comp_bitstream_t* in_stream, comp_bitstream
     if(huffman_header_len == huffman_header_len_min)
     {
         comp_bitstream_write_char(out_stream, HUFFMAN_HEADER_MARKER);
-        comp_bitstream_write_short(out_stream, 0);
+        comp_bitstream_write_short(out_stream, 2);
         huffman_ctx_cleanup(huff);
         return 0;
     }
@@ -328,12 +328,12 @@ static int huffman_read_header(comp_huffman_ctx_t* huff, comp_bitstream_t* in_st
     comp_bitstream_read_char(in_stream, &hdr_low);
     size_t huffman_hdr_len = (u_char)hdr_high << 8 | (u_char)hdr_low;
     comp_bar_add(huff->bar, huffman_hdr_len);
+    huffman_hdr_len -= 2;
     if(huffman_hdr_len == 0)
     {
         huff->content_len = 0;
         return 0;
     }
-    huffman_hdr_len -= 2;
     comp_bitstream_read_int(in_stream, (int*)(&huff->content_len));
     huffman_hdr_len -= 4;
     u_char num[17] = {0};
