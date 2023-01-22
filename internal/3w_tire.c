@@ -7,7 +7,7 @@
 static comp_tire_t* get(comp_tire_t* t,  comp_str_t s, int d)
 {
     if(!t) return NULL;
-    char c = comp_str_at(s, d);
+    u_char c = comp_str_at(s, d);
     if(c < t->c) return get(t->left, s, d);
     else if(c > t->c) return get(t->right, s, d);
     else if(d < comp_str_len(s) - 1) return get(t->mid, s, d + 1);
@@ -21,10 +21,11 @@ comp_tire_t* comp_tire_get(comp_tire_t* t, comp_str_t s)
 
 comp_tire_t* put(comp_tire_t* t, comp_str_t s, TIRE_VALUE_TYPE v, int d)
 {
-    char c = comp_str_at(s, d);
+    u_char c = comp_str_at(s, d);
     if(!t)
     {
         t = (comp_tire_t*) malloc(sizeof(comp_tire_t));
+        t->left = t->right = t->mid = NULL;
         t->c = c;
     }
     if(c < t->c) t->left = put(t->left, s, v, d);

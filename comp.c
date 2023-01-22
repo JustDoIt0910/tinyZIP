@@ -32,6 +32,12 @@ static comp_lzw_codec_t* lzw_codec_new(comp_progress_bar* bar)
     comp_lzw_codec_t* codec = (comp_lzw_codec_t*) malloc(sizeof(comp_lzw_codec_t));
     if(!codec) return NULL;
     CODEC_PARENT_INIT(codec, COMP_CODEC_LZW, comp_codec_encode, comp_codec_decode);
+    codec->lzw_ctx = comp_lzw_init(bar);
+    if(!codec->lzw_ctx)
+    {
+        free(codec);
+        return NULL;
+    }
     return codec;
 }
 
@@ -59,6 +65,8 @@ void comp_codec_free(comp_codec_t* codec)
         case COMP_CODEC_HUFFMAN:
             comp_huffman_free(((comp_huffman_codec_t*) codec)->huffman_ctx);
             break;
+        case COMP_CODEC_LZW:
+            comp_lzw_free(((comp_lzw_codec_t*) codec)->lzw_ctx);
         default:
             break;
     }
@@ -101,8 +109,8 @@ int comp_codec_encode(comp_codec_t* codec, comp_bitstream_t* in, comp_bitstream_
     else if(codec->type == COMP_CODEC_LZW)
     {
         comp_lzw_codec_t* lzw_codec = (comp_lzw_codec_t*) codec;
-        // TODO lzw encode
-        return -1;
+        comp_lzw_ctx_t* ctx = lzw_codec->lzw_ctx;
+        return ctx->lzw_encode(ctx, in, out);
     }
     return -1;
 }
@@ -118,8 +126,8 @@ int comp_codec_decode(comp_codec_t* codec, comp_bitstream_t* in, comp_bitstream_
     else if(codec->type == COMP_CODEC_LZW)
     {
         comp_lzw_codec_t* lzw_codec = (comp_lzw_codec_t*) codec;
-        // TODO lzw decode
-        return -1;
+        comp_lzw_ctx_t* ctx = lzw_codec->lzw_ctx;
+        return ctx->lzw_decode(ctx, in, out);
     }
     return -1;
 }

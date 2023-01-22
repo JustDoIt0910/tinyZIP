@@ -1,11 +1,11 @@
 //
 // Created by zr on 23-1-13.
 //
-
 #ifndef COMPRESS_COMP_H
 #define COMPRESS_COMP_H
 #include <stdio.h>
 #include "huffman.h"
+#include "lzw.h"
 
 
 struct comp_codec_s;
@@ -31,7 +31,7 @@ struct comp_huffman_codec_s
 struct comp_lzw_codec_s
 {
     struct comp_codec_s p;
-    // TODO implement lzw codec
+    comp_lzw_ctx_t* lzw_ctx;
 };
 
 typedef struct comp_codec_s comp_codec_t;

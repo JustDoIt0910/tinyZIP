@@ -29,10 +29,17 @@ int main()
     t = comp_tire_get(root, s4);
     if(!t) printf("s4 not found\n");
 
+    comp_str_t s5 = comp_str_new("aaaaaaaaaaaaaaa");
+    root = comp_tire_put(root, s5, 20);
+    s5 = comp_str_append_char(s5, '\n');
+    t = comp_tire_get(root, s5);
+    if(t) printf("found s5, value = %u\n", t->value);
+
     comp_str_free(s1);
     comp_str_free(s2);
     comp_str_free(s3);
     comp_str_free(s4);
+    comp_str_free(s5);
     comp_tire_free(root);
     return 0;
 }

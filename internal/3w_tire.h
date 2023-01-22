@@ -10,7 +10,7 @@
 
 struct comp_tire_node_s
 {
-    char c;
+    u_char c;
     struct comp_tire_node_s* left;
     struct comp_tire_node_s* mid;
     struct comp_tire_node_s* right;

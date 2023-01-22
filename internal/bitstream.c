@@ -2,6 +2,7 @@
 // Created by zr on 23-1-13.
 //
 #include "bitstream.h"
+#include <string.h>
 #include <stdlib.h>
 
 comp_bitstream_t* comp_bitstream_init(FILE* fp)
@@ -112,6 +113,12 @@ int comp_bitstream_write(comp_bitstream_t* s, const char* data, size_t len)
     return 0;
 }
 
+int comp_bitstream_write_str(comp_bitstream_t* s, const char* str)
+{
+    size_t len = strlen(str);
+    return comp_bitstream_write(s, str, len);
+}
+
 int comp_bitstream_flush(comp_bitstream_t* s)
 {
     if(clear_out_buf(s) < 0)
@@ -138,8 +145,7 @@ int comp_bitstream_read_bit(comp_bitstream_t* s, int* bit)
     if(s->eof)
         return -1;
     s->in_buf_remain--;
-    if(bit)
-        *bit = (s->in_buf >> s->in_buf_remain) & 1;
+    if(bit) *bit = (s->in_buf >> s->in_buf_remain) & 1;
     return 0;
 }
 
@@ -159,12 +165,12 @@ int comp_bitstream_read_char(comp_bitstream_t* s, char* ch)
     fill_in_buf(s);
     if(s->eof)
     {
-        *ch = (char) c;
+        if(ch) *ch = (char) c;
         return -1;
     }
     s->in_buf_remain = remain;
     c |= (s->in_buf >> s->in_buf_remain);
-    *ch = (char) c;
+    if(ch) *ch = (char) c;
     return 0;
 }
 
@@ -175,7 +181,7 @@ int comp_bitstream_read_short(comp_bitstream_t* s, short* st)
     if(comp_bitstream_read_char(s, &c2) < 0) return -1;
     x = (short) (x | (c1 & 0xFF));
     x = (short) ((x << 8) | (c2 & 0xFF));
-    *st = x;
+    if(st) *st = x;
     return 0;
 }
 
@@ -190,7 +196,22 @@ int comp_bitstream_read_int(comp_bitstream_t* s, int* i)
     x = (x << 8) | (c2 & 0xFF);
     x = (x << 8) | (c3 & 0xFF);
     x = (x << 8) | (c4 & 0xFF);
-    *i = x;
+    if(i) *i = x;
+    return 0;
+}
+
+int comp_bitstream_read_nbit(comp_bitstream_t* s, int* i, size_t len)
+{
+    int x = 0; int bit;
+    for(size_t n = 0; n < len; n++)
+    {
+        if(comp_bitstream_read_bit(s, &bit) < 0)
+            return -1;
+        x = x | bit;
+        if(n < len - 1)
+            x <<= 1;
+    }
+    if(i) *i = x;
     return 0;
 }
 
