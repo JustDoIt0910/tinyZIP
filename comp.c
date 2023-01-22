@@ -79,6 +79,7 @@ comp_compressor_t* comp_compressor_init(comp_codec_type type)
     if(!c) return NULL;
     c->bar = comp_bar_init("", 0);
     c->codec = comp_codec_init(type, c->bar);
+    printf("using %s algorithm\n", type == COMP_CODEC_HUFFMAN ? "huffman" : "lzw");
     if(!c->codec) return NULL;
     c->state = COMP_PARSE_STOP;
     c->cur_decompress_dir = comp_str_empty();
