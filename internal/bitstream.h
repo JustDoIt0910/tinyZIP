@@ -27,6 +27,7 @@ int comp_bitstream_write_char(comp_bitstream_t*, char);
 int comp_bitstream_write_short(comp_bitstream_t*, short);
 int comp_bitstream_write_int(comp_bitstream_t*, int);
 int comp_bitstream_write(comp_bitstream_t*, const char*, size_t);
+int comp_bitstream_write_nbit(comp_bitstream_t*, int, size_t);
 int comp_bitstream_flush(comp_bitstream_t*);
 int comp_bitstream_read_bit(comp_bitstream_t*, int*);
 int comp_bitstream_read_char(comp_bitstream_t*, char*);

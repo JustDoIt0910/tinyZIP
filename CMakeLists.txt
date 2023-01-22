@@ -10,5 +10,5 @@ add_subdirectory(internal/test)
 add_subdirectory(test)
 add_executable(compress main.c
         internal/bitstream.c internal/vector.c
-        internal/pqueue.c internal/str.c
-        huffman.c comp.c bar.c)
+        internal/pqueue.c internal/str.c internal/3w_tire.c
+        huffman.c comp.c bar.c lzw.c)

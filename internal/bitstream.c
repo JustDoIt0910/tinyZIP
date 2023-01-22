@@ -92,6 +92,18 @@ int comp_bitstream_write_int(comp_bitstream_t* s, int i)
     return 0;
 }
 
+int comp_bitstream_write_nbit(comp_bitstream_t* s, int i, size_t len)
+{
+    int bit;
+    for(int n = (int) len - 1; n >= 0; n--)
+    {
+        bit = (i >> n) & 1;
+        if(comp_bitstream_write_bit(s, bit) < 0)
+            return -1;
+    }
+    return 0;
+}
+
 int comp_bitstream_write(comp_bitstream_t* s, const char* data, size_t len)
 {
     for(size_t i = 0; i < len; i++)

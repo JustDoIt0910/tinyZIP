@@ -30,5 +30,6 @@ void comp_str_free(comp_str_t);
 void comp_str_debug(comp_str_t);
 comp_str_t comp_str_parse_int(int, int);
 char comp_str_at(comp_str_t, size_t);
+comp_str_t comp_str_substr(comp_str_t, size_t, size_t);
 
 #endif //COMPRESS_STR_H

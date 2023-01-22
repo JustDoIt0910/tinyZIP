@@ -158,3 +158,11 @@ char comp_str_at(comp_str_t s, size_t index)
         return -1;
     return s[index];
 }
+
+comp_str_t comp_str_substr(comp_str_t s, size_t start, size_t len)
+{
+    if(start >= comp_str_len(s) || start + len > comp_str_len(s))
+        return NULL;
+    comp_str_t sub = comp_str_new_len(s, len);
+    return sub;
+}
