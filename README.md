@@ -2,9 +2,9 @@
 
 # TinyCompressor
 
-#### 使用huffman编码的简单压缩工具。建立huffman树后，转换成范式huffman编码进行保存。支持文件和文件夹的压缩。
+#### 实现了huffman编码和LZW两种压缩算法的简单压缩工具。支持文件和文件夹的压缩。
 
-##### 编译
+#### 编译
 
 ```sh
 git clone https://github.com/JustDoIt0910/TinyCompressor.git
@@ -46,7 +46,7 @@ make
 | 文件名       | n    |      |
 | 压缩文件数据 |      |      |
 
-压缩数据格式
+压缩数据格式(huffman)
 
 | 字段                   | 长度  | 值                         |
 | ---------------------- | ----- | -------------------------- |
@@ -58,15 +58,38 @@ make
 | padding 长度(字节对齐) | 1     | padding len                |
 | 压缩数据               |       |                            |
 
+压缩数据格式(LZW)
+
+| 字段     | 长度 | 值            |
+| -------- | ---- | ------------- |
+| 压缩算法 | 1    | 0x4C(LZW压缩) |
+| 压缩数据 |      |               |
+
 ![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressorDemo1.png)
 
 ![](https://github.com/JustDoIt0910/MarkDownPictures/blob/main/TinyCompressorDemo2.png)
 
 
 
+**主函数创建压缩器时可以指定不同的编解码器(huffman/lzw)**
+
+```c
+int main(int argc, char* argv[])
+{
+    ...
+    comp_compressor_t* c = comp_compressor_init(COMP_CODEC_HUFFMAN);
+     //comp_compressor_t* c = comp_compressor_init(COMP_CODEC_LZW);
+    ...
+}
+```
+
+
+
+实测huffman普适性较强，多数情况下压缩率为50%~80%，除非文件过小，否则基本不会发生膨胀情况。LZW对于文本文件有较高压缩率，对于重复序列极少的二进制文件会出现压缩率很大甚至膨胀情况。
+
 #### TODO
 
 - [x] huffman压缩
 - [x] 文件夹打包
-- [ ] LZW压缩
+- [x] LZW压缩
 - [ ] BWT+RLE
