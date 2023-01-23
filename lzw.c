@@ -80,6 +80,7 @@ int encode(comp_lzw_ctx_t* lzw, comp_bitstream_t* in_stream, comp_bitstream_t* o
         comp_str_clear(lst_prefix);
         comp_str_append_char(lst_prefix, lookahead);
     }
+    comp_str_free(lst_prefix);
 end:
     comp_bitstream_write_nbit(out_stream, LZW_TERMINATE_CODE, LZW_CODE_WIDTH);
     comp_bitstream_flush(out_stream);
