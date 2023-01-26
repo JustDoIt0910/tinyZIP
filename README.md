@@ -56,6 +56,7 @@ make
 | 1-16位码长symbol种数   | 16    | N1, N2, ... N16            |
 | symbols                | ∑(Ni) | symbols                    |
 | padding 长度(字节对齐) | 1     | padding len                |
+| padding填充               |       |                            |
 | 压缩数据               |       |                            |
 
 压缩数据格式(LZW)
