@@ -1,6 +1,8 @@
-//
-// Created by zr on 23-1-21.
-//
+/*
+ * 没有进行优化的LZW算法实现
+ * 原理参考了《算法》第四版的LZW
+ */
+
 #include "lzw.h"
 #include "marker.h"
 #include <stdlib.h>

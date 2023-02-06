@@ -18,7 +18,7 @@ typedef int (*comp_lzw_decode_f) (struct comp_lzw_ctx_s*, comp_bitstream_t*, com
 
 struct comp_lzw_ctx_s
 {
-    comp_tire_t* tire; // for encoding
+    comp_tire_t* tire; // 三路字典树，压缩过程使用
     comp_progress_bar* bar;
     comp_lzw_encode_f lzw_encode;
     comp_lzw_decode_f lzw_decode;

@@ -16,15 +16,17 @@
     printf("%s:%d ", __FILE__, __LINE__),   \
     printf(fmt, __VA_ARGS__), printf("\n")
 
+/* huffman 树节点 */
 struct comp_huffman_node_s
 {
-    u_char c;
-    u_int32_t freq;
+    u_char c; //字符
+    u_int32_t freq; //频数
     int is_leaf;
     struct comp_huffman_node_s* left;
     struct comp_huffman_node_s* right;
 };
 
+/* 用于将符号symbol与其huffman编码长度绑定 */
 struct comp_huffman_symbol_s
 {
     u_char symbol;
@@ -40,13 +42,13 @@ typedef int (*comp_huffman_decode_f)(struct comp_huffman_ctx_s*, comp_bitstream_
 
 struct comp_huffman_ctx_s
 {
-    u_int32_t freq[256];
-    comp_str_t symbol_code_table[256];
+    u_int32_t freq[256]; //统计每个symbol的频数
+    comp_str_t symbol_code_table[256]; //symbol -> huffman编码 对应表(编译表)，只在编码时用到
     comp_vec_t* symbols;
     comp_huffman_node_t* root;
     u_char padding;
     u_int32_t content_len;
-    int disable;
+    int disable; //是否禁用huffman编码
     comp_progress_bar* bar;
     comp_huffman_encode_f huffman_encode;
     comp_huffman_decode_f huffman_decode;

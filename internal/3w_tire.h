@@ -1,5 +1,6 @@
 //
 // Created by zr on 23-1-21.
+// 三路字典树，参考《算法》第四版实现
 //
 #ifndef COMPRESS_3W_TIRE_H
 #define COMPRESS_3W_TIRE_H
@@ -11,9 +12,9 @@
 struct comp_tire_node_s
 {
     u_char c;
-    struct comp_tire_node_s* left;
-    struct comp_tire_node_s* mid;
-    struct comp_tire_node_s* right;
+    struct comp_tire_node_s* left; //首字符 < c 的字符串
+    struct comp_tire_node_s* mid; //首字符 == c 的字符串
+    struct comp_tire_node_s* right; //首字符 > c 的字符串
     TIRE_VALUE_TYPE value;
 };
 

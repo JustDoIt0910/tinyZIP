@@ -15,7 +15,8 @@ void default_output_filename(const char* input, char* output)
 }
 
 int main(int argc, char* argv[]) {
-    comp_compressor_t* c = comp_compressor_init(COMP_CODEC_HUFFMAN);
+    //comp_compressor_t* c = comp_compressor_init(COMP_CODEC_HUFFMAN);
+    comp_compressor_t* c = comp_compressor_init(COMP_CODEC_LZW);
     if(!c) return 0;
     if(argc < 2)
     {

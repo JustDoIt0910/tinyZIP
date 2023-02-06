@@ -1,5 +1,6 @@
 //
 // Created by zr on 23-1-18.
+// 一个简单的进度条
 //
 
 #ifndef COMPRESS_BAR_H

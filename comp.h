@@ -47,12 +47,13 @@ struct comp_compressor_s;
 typedef void (*comp_compress_f) (struct comp_compressor_s*, const char*, const char*);
 typedef void (*comp_decompress_f) (struct comp_compressor_s*, const char*);
 
+//解压过程的状态机
 typedef enum comp_parse_state
 {
     COMP_PARSE_START,
-    COMP_PARSE_FILE,
-    COMP_PARSE_DIR,
-    COMP_PARSE_STOP,
+    COMP_PARSE_FILE, //正在解压文件
+    COMP_PARSE_DIR, //正在解压文件夹
+    COMP_PARSE_STOP, //解压完成
     COMP_PARSE_FAIL
 } comp_parse_state;
 
