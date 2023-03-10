@@ -4,6 +4,8 @@
 
 #### 实现了huffman编码和LZW两种压缩算法的简单压缩工具。支持文件和文件夹的压缩。
 
+[视频demo](https://www.bilibili.com/video/BV1NA411d7kR/)
+
 #### 编译
 
 ```sh
